@@ -5,7 +5,7 @@ import plotly.io as pio
 import geopandas as gpd
 import pandas as pd
 
-import duckdb
+from dagster_duckdb import DuckDBResource
 import os
 
 from . import constants
@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 @asset(
     deps=["taxi_trips", "taxi_zones"]
 )
-def manhattan_stats():
+def manhattan_stats(database: DuckDBResource):
     query = """
         select
             zones.zone,
@@ -29,8 +29,8 @@ def manhattan_stats():
         group by zone, borough, geometry
     """
 
-    conn = duckdb.connect(os.getenv("DUCKDB_DATABASE"))  # type: ignore
-    trips_by_zone = conn.execute(query).fetch_df()
+    with database.get_connection() as conn:
+        trips_by_zone = conn.execute(query).fetch_df()
 
     trips_by_zone["geometry"] = gpd.GeoSeries.from_wkt(trips_by_zone["geometry"])
     trips_by_zone = gpd.GeoDataFrame(trips_by_zone)
@@ -64,8 +64,7 @@ def manhattan_map():
 @asset(
     deps=["taxi_trips"]
 )
-def trips_by_week(context):
-    conn = duckdb.connect(os.getenv("DUCKDB_DATABASE"))  # type: ignore
+def trips_by_week(context, database: DuckDBResource):
 
     current_date = datetime.strptime("2023-01-01", constants.DATE_FORMAT)
     end_date = datetime.now()
@@ -81,7 +80,8 @@ def trips_by_week(context):
             where date_trunc('week', pickup_datetime) = date_trunc('week', '{current_date_str}'::date)
         """
 
-        data_for_week = conn.execute(query).fetch_df()
+        with database.get_connection() as conn:
+            data_for_week = conn.execute(query).fetch_df()
 
         aggregate = data_for_week.agg({
             "vendor_id": "count",
