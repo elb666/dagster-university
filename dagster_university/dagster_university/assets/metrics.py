@@ -6,9 +6,11 @@ import geopandas as gpd
 import pandas as pd
 
 from dagster_duckdb import DuckDBResource
-import os
+# import os
 
 from . import constants
+from ..partitions import weekly_partition
+
 from datetime import datetime, timedelta
 
 
@@ -62,7 +64,8 @@ def manhattan_map():
 
 
 @asset(
-    deps=["taxi_trips"]
+    deps=["taxi_trips"],
+    partitions_def=weekly_partition,
 )
 def trips_by_week(context, database: DuckDBResource):
 
