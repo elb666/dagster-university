@@ -2,5 +2,10 @@
 *egg-info
 __pycache__/
 venv
-data/
 .DS_Store
+
+data/
+!data/outputs/.gitkeep
+!dagster_university/data/raw/.gitkeep
+!dagster_university/data/staging/.gitkeep
+!data/requests/README.md
